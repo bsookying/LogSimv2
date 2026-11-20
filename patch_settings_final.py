@@ -15,14 +15,22 @@ if 'data-tab="settings"' in src or 'tab-settings' in src or '_settingsRawKey' in
                      'then re-run this script. No changes were made.')
 
 # ── 1. Settings button — LAST in nav, margin-left:auto ────────────────────────
-# Find the closing > of the bad-user button and insert Settings after it
+# Insert after the full bad-user <button>...</button> element
 baduser_idx = src.find('data-tab="baduser"')
 assert baduser_idx != -1, 'bad-user tab not found'
-close = src.find('>', baduser_idx)
+close = src.find('</button>', baduser_idx)
 assert close != -1
+close += len('</button>') - 1
 BTN = '\n  <button class="tab-btn" data-tab="settings" onclick="switchTab(\'settings\')" style="margin-left:auto">&#9881; Settings</button>'
 src = src[:close+1] + BTN + src[close+1:]
 print('1. Settings tab button added after bad-user (far right).')
+
+# Nav is content-width inside a space-between header, so margin-left:auto has no
+# room to act. Let the nav fill the gap between logo and header-actions.
+NAV_OPEN = '<nav class="tab-nav">'
+assert src.count(NAV_OPEN) == 1, 'tab-nav opening tag not found exactly once'
+src = src.replace(NAV_OPEN, '<nav class="tab-nav" style="flex:1;margin:0 20px">')
+print('1b. Nav stretched so Settings sits at far right.')
 
 # ── 2. Settings tab HTML — inserted before </main> ────────────────────────────
 TAB_HTML = """
