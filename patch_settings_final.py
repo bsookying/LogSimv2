@@ -9,6 +9,10 @@ f = Path('/opt/logsim/dashboard/templates/index.html')
 src = f.read_text()
 assert '</html>' in src, 'File appears truncated — restore from git first.'
 print(f'File OK: {src.count(chr(10))+1} lines')
+if 'data-tab="settings"' in src or 'tab-settings' in src or '_settingsRawKey' in src:
+    raise SystemExit('ABORT: index.html is already patched. Restore the clean file first:\n'
+                     '  sudo -u lab-user git -C /opt/logsim checkout -- dashboard/templates/index.html\n'
+                     'then re-run this script. No changes were made.')
 
 # ── 1. Settings button — LAST in nav, margin-left:auto ────────────────────────
 # Find the closing > of the bad-user button and insert Settings after it
