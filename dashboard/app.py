@@ -3424,6 +3424,415 @@ def api_baduser_status():
         })
 
 
+# ── Settings UI routes ────────────────────────────────────────────────────────
+# Manage .env keys from the dashboard. Changes apply on restart (env is read at
+# process start). Gated by the normal /api/* API-key check; when NO API key is
+# set, the only write allowed is generate-key (bootstrap).
+import re as _st_re
+import socket as _st_socket
+import secrets as _st_secrets
+import tempfile as _st_tempfile
+import pathlib as _st_pathlib
+
+_ST_ENV_PATH = _st_pathlib.Path(PROJECT_ROOT) / ".env"
+_ST_MASK = "•" * 8
+_ST_HOST_RE = _st_re.compile(r"^[A-Za-z0-9.\-:\[\]]{1,253}$")
+
+
+def _st_f(key, label, type="text", secret=False, optional=False, choices=None, hint=""):
+    return {
+        "key": key,
+        "label": label,
+        "type": type,
+        "secret": secret,
+        "optional": optional,
+        "choices": choices or [],
+        "hint": hint,
+    }
+
+
+# Data Source Integrations — mirrors the transport sections of .env.example.
+# Single source of truth: the UI renders whatever this list contains.
+_ST_SOURCES = [
+    {
+        "id": "http",
+        "name": "HTTP Collector",
+        "desc": "XSIAM HTTP Event Collector, used by all HTTP-transport modules.",
+        "fields": [_st_f("HTTP_COLLECTOR_URL", "Collector URL", "url")],
+    },
+    {
+        "id": "okta",
+        "name": "Okta SSO",
+        "desc": "URL and auth type are not needed if the HTTP Collector is set.",
+        "fields": [
+            _st_f("OKTA_KEY", "API Key", secret=True),
+            _st_f("OKTA_COLLECTOR_URL", "Collector URL", "url", optional=True),
+            _st_f(
+                "OKTA_AUTH_TYPE",
+                "Auth Type",
+                "choice",
+                optional=True,
+                choices=["xsiam", "splunk_hec", "basic", "none"],
+            ),
+        ],
+    },
+    {
+        "id": "proofpoint",
+        "name": "Proofpoint Email",
+        "desc": "URL and auth type are not needed if the HTTP Collector is set.",
+        "fields": [
+            _st_f("PROOFPOINT_KEY", "API Key", secret=True),
+            _st_f("PROOFPOINT_COLLECTOR_URL", "Collector URL", "url", optional=True),
+            _st_f(
+                "PROOFPOINT_AUTH_TYPE",
+                "Auth Type",
+                "choice",
+                optional=True,
+                choices=["xsiam", "splunk_hec", "basic", "none"],
+            ),
+        ],
+    },
+    {
+        "id": "cribl",
+        "name": "Cribl Receiver",
+        "desc": "XSIAM integrated Cribl receiver: Microsoft feeds, and the fallback for every other module.",
+        "fields": [
+            _st_f(
+                "CRIBL_COLLECTOR_URL",
+                "Collector URL",
+                "url",
+                hint="Ends in /logs/v1/integrated/cribl/data",
+            ),
+            _st_f(
+                "CRIBL_TOKEN",
+                "Token",
+                secret=True,
+                hint='LogSim adds the "Bearer " prefix',
+            ),
+        ],
+    },
+    {
+        "id": "wec",
+        "name": "Windows Events — WEC",
+        "desc": "WS-Management direct to the Broker VM (default Windows transport). Needs the PFX client cert from XSIAM.",
+        "fields": [
+            _st_f("WEC_BROKER_URL", "Broker URL", "url", hint="https://<broker>:5986/wsman"),
+            _st_f("WEC_PFX_PATH", "PFX Path", "path"),
+            _st_f("WEC_PFX_PASSWORD", "PFX Password", secret=True),
+            _st_f(
+                "WEC_ISSUER_CA",
+                "Issuer CA Thumbprint",
+                optional=True,
+                hint="Informational only; LogSim does not read it",
+            ),
+        ],
+    },
+    {
+        "id": "winhttp",
+        "name": "Windows Events — HTTP",
+        "desc": 'Alternative to WEC: set transport "http" in windows_events_config.',
+        "fields": [
+            _st_f("WINDOWS_EVENTS_COLLECTOR_URL", "Collector URL", "url"),
+            _st_f("WINDOWS_EVENTS_KEY", "Key", secret=True),
+        ],
+    },
+    {
+        "id": "aws",
+        "name": "AWS CloudTrail (S3)",
+        "desc": "Values come from the CloudFormation stack outputs.",
+        "fields": [
+            _st_f("S3_BUCKET_NAME", "S3 Bucket"),
+            _st_f("AWS_ACCOUNT_ID", "Account ID"),
+            _st_f("AWS_REGION", "Region", optional=True, hint="Default us-east-1"),
+            _st_f("AWS_ACCESS_KEY_ID", "Access Key ID"),
+            _st_f("AWS_SECRET_ACCESS_KEY", "Secret Access Key", secret=True),
+        ],
+    },
+    {
+        "id": "gcp",
+        "name": "GCP Cloud Audit (Pub/Sub)",
+        "desc": "Use either a key file path (Option A) or the inline service-account JSON (Option B).",
+        "fields": [
+            _st_f("GCP_PROJECT_ID", "Project ID"),
+            _st_f("GCP_PROJECT_NUMBER", "Project Number"),
+            _st_f("GCP_PUBSUB_TOPIC", "Pub/Sub Topic"),
+            _st_f("GOOGLE_APPLICATION_CREDENTIALS", "Key File Path", "path", optional=True),
+            _st_f(
+                "GCP_SERVICE_ACCOUNT_KEY_JSON",
+                "Inline Key JSON",
+                secret=True,
+                optional=True,
+                hint="Single line, no newlines",
+            ),
+        ],
+    },
+    {
+        "id": "xdr",
+        "name": "XDR Attack Target (WinRM)",
+        "desc": "Live Windows box with the Cortex XDR agent for real Atomic Red Team techniques.",
+        "fields": [
+            _st_f("XDR_TARGET_HOST", "Target Host", "host"),
+            _st_f(
+                "XDR_TARGET_WINRM_USER",
+                "WinRM User",
+                hint="No DOMAIN\\ prefix for a workgroup box",
+            ),
+            _st_f("XDR_TARGET_WINRM_PASSWORD", "WinRM Password", secret=True),
+            _st_f("XDR_TARGET_WINRM_PORT", "WinRM Port", "port", optional=True, hint="Default 5985"),
+            _st_f(
+                "XDR_TARGET_WINRM_SCHEME",
+                "WinRM Scheme",
+                "choice",
+                optional=True,
+                choices=["http", "https"],
+            ),
+            _st_f(
+                "XDR_TARGET_WINRM_AUTH",
+                "WinRM Auth",
+                "choice",
+                optional=True,
+                choices=["ntlm", "basic", "kerberos"],
+            ),
+            _st_f(
+                "XDR_TARGET_TRANSPORT",
+                "Transport",
+                "choice",
+                optional=True,
+                choices=["winrm", "stub"],
+            ),
+            _st_f("XDR_TARGET_EGRESS_IP", "Egress IP", "host", optional=True),
+            _st_f("XDR_EMAIL_DOMAIN", "Email Domain", optional=True),
+        ],
+    },
+    {
+        "id": "xsiamapi",
+        "name": "XSIAM Public API",
+        "desc": "For XDR detection scorecards, policy control, tenant health checks, and validation scripts.",
+        "fields": [
+            _st_f("XSIAM_API_BASE", "API Base URL", "url"),
+            _st_f("XSIAM_API_KEY_ID", "API Key ID"),
+            _st_f("XSIAM_API_KEY", "API Key", secret=True),
+            _st_f(
+                "XSIAM_CONSOLE_URL",
+                "Console URL",
+                "url",
+                optional=True,
+                hint='Optional; defaults to API Base without the "api-" prefix',
+            ),
+            _st_f(
+                "XSIAM_FOREIGN_HOSTS",
+                "Foreign Hosts",
+                optional=True,
+                hint="Comma-separated real hosts that also feed microsoft_windows_raw",
+            ),
+        ],
+    },
+]
+
+# Top-level fields shown in their own cards (not under Data Source Integrations).
+# LOGSIM_API_KEY is NOT masked: any caller of this route already holds it (or auth is off).
+_ST_FIELDS = {
+    "LOGSIM_API_KEY": _st_f("LOGSIM_API_KEY", "LogSim API Key"),
+    "SYSLOG_HOST": _st_f("SYSLOG_HOST", "Broker VM Syslog Host", "host"),
+}
+for _st_src in _ST_SOURCES:
+    for _st_fd in _st_src["fields"]:
+        _ST_FIELDS[_st_fd["key"]] = _st_fd
+_ST_KEYS = list(_ST_FIELDS)
+_ST_SECRET = {k for k, fd in _ST_FIELDS.items() if fd["secret"]}
+
+
+def _st_unquote(v):
+    v = v.strip()
+    if len(v) >= 2 and v[0] == v[-1] and v[0] in ('"', "'"):
+        inner = v[1:-1]
+        if v[0] == '"':
+            inner = _st_re.sub(r'\\(["\\])', r"\1", inner)
+        return inner
+    return v
+
+
+def _st_quote(v):
+    if v == "" or _st_re.fullmatch(r"[A-Za-z0-9_.:/@%+=,\-]+", v):
+        return v
+    return '"' + v.replace("\\", "\\\\").replace('"', '\\"') + '"'
+
+
+def _st_read_env():
+    out = {}
+    if _ST_ENV_PATH.exists():
+        for line in _ST_ENV_PATH.read_text(encoding="utf-8").splitlines():
+            s = line.strip()
+            if s.startswith("export "):
+                s = s[7:].lstrip()
+            if s and not s.startswith("#") and "=" in s:
+                k, _, v = s.partition("=")
+                out[k.strip()] = _st_unquote(v)
+    return out
+
+
+def _st_write_env(updates):
+    """Atomic in-place update; creates .env if missing; preserves file mode."""
+    lines = _ST_ENV_PATH.read_text(encoding="utf-8").splitlines() if _ST_ENV_PATH.exists() else []
+    written, new_lines = set(), []
+    for line in lines:
+        s = line.strip()
+        bare = s[7:].lstrip() if s.startswith("export ") else s
+        if bare and not bare.startswith("#") and "=" in bare:
+            k = bare.split("=", 1)[0].strip()
+            if k in updates:
+                new_lines.append(f"{k}={_st_quote(updates[k])}")
+                written.add(k)
+                continue
+        new_lines.append(line)
+    for k, v in updates.items():
+        if k not in written:
+            new_lines.append(f"{k}={_st_quote(v)}")
+    mode = _ST_ENV_PATH.stat().st_mode & 0o777 if _ST_ENV_PATH.exists() else 0o600
+    fd, tmp = _st_tempfile.mkstemp(dir=str(_ST_ENV_PATH.parent), prefix=".env.", suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            fh.write("\n".join(new_lines) + "\n")
+        os.chmod(tmp, mode)
+        os.replace(tmp, _ST_ENV_PATH)
+    except Exception:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise
+
+
+def _st_validate(k, v):
+    """Return an error string, or None if the value is acceptable."""
+    if not isinstance(v, str):
+        return f"{k}: value must be a string"
+    if any(c in v for c in "\r\n\x00"):
+        return f"{k}: line breaks are not allowed"
+    if len(v) > 16384:
+        return f"{k}: value too long"
+    if v == "":
+        return None  # empty = clear
+    fd = _ST_FIELDS[k]
+    t = fd["type"]
+    if t == "host" and not _ST_HOST_RE.match(v):
+        return f"{k}: must be an IP address or hostname"
+    if t == "url" and not v.lower().startswith(("http://", "https://")):
+        return f"{k}: must start with http:// or https://"
+    if t == "port" and not (v.isdigit() and 1 <= int(v) <= 65535):
+        return f"{k}: must be a port number (1-65535)"
+    if t == "choice" and v not in fd["choices"]:
+        return f'{k}: must be one of {", ".join(fd["choices"])}'
+    return None
+
+
+def _st_write_blocked():
+    if _API_KEY:
+        return None  # before_request already verified the caller's key
+    return (
+        jsonify(
+            {
+                "error": "No LOGSIM_API_KEY is set, so settings writes are disabled. "
+                "Use Generate New to create a key, restart LogSim, then reload."
+            }
+        ),
+        403,
+    )
+
+
+@app.get("/api/settings")
+def api_settings_get():
+    env = _st_read_env()
+    values = {
+        k: (_ST_MASK if k in _ST_SECRET and env.get(k) else env.get(k, ""))
+        for k in _ST_KEYS
+    }
+    return jsonify({"values": values, "sources": _ST_SOURCES, "mask": _ST_MASK})
+
+
+@app.post("/api/settings")
+def api_settings_post():
+    blocked = _st_write_blocked()
+    if blocked:
+        return blocked
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return jsonify({"error": "Expected a JSON object"}), 400
+    updates = {}
+    for k, v in data.items():
+        if k not in _ST_KEYS:
+            return jsonify({"error": f"{k}: not a managed setting"}), 400
+        if v == _ST_MASK:
+            continue  # unchanged secret placeholder
+        v = v.strip() if isinstance(v, str) else v
+        err = _st_validate(k, v)
+        if err:
+            return jsonify({"error": err}), 400
+        updates[k] = v
+    if not updates:
+        return jsonify({"error": "No changes provided"}), 400
+    try:
+        _st_write_env(updates)
+    except OSError as exc:
+        return jsonify({"error": f"Could not write .env: {exc}"}), 500
+    return jsonify({"saved": sorted(updates), "restart_required": True})
+
+
+@app.post("/api/settings/generate-key")
+def api_settings_generate_key():
+    key = _st_secrets.token_hex(32)
+    try:
+        _st_write_env({"LOGSIM_API_KEY": key})
+    except OSError as exc:
+        return jsonify({"error": f"Could not write .env: {exc}"}), 500
+    return jsonify({"key": key, "restart_required": True})
+
+
+@app.post("/api/settings/test-broker")
+def api_settings_test_broker():
+    """TCP-probe every syslog port LogSim ships to, matching the Health tab."""
+    data = request.get_json(silent=True) or {}
+    host = (data.get("host") or os.getenv("SYSLOG_HOST") or "").strip()
+    if not host:
+        return jsonify({"ok": False, "message": "No Broker VM host configured", "results": []})
+    if not _ST_HOST_RE.match(host):
+        return jsonify({"ok": False, "message": "Invalid host", "results": []}), 400
+    ports = {}
+    try:
+        gp = int(CONFIG.get("syslog_port", 514) or 514)
+    except (TypeError, ValueError):
+        gp = 514
+    ports.setdefault(gp, []).append("default")
+    for ck, cv in CONFIG.items():
+        if isinstance(cv, dict) and cv.get("syslog_port"):
+            try:
+                p = int(cv["syslog_port"])
+            except (TypeError, ValueError):
+                continue
+            ports.setdefault(p, []).append(ck[:-7] if ck.endswith("_config") else ck)
+    results = []
+    for p in sorted(ports):
+        srcs = ", ".join(sorted(ports[p]))
+        try:
+            with _st_socket.create_connection((host, p), timeout=3):
+                pass
+            results.append({"port": p, "ok": True, "sources": srcs, "detail": "reachable"})
+        except _st_socket.timeout:
+            results.append({"port": p, "ok": False, "sources": srcs, "detail": "timeout"})
+        except ConnectionRefusedError:
+            results.append({"port": p, "ok": False, "sources": srcs, "detail": "refused (port closed)"})
+        except OSError as exc:
+            results.append({"port": p, "ok": False, "sources": srcs, "detail": str(exc)})
+    n_ok = sum(r["ok"] for r in results)
+    return jsonify(
+        {
+            "ok": n_ok == len(results),
+            "message": f"{host}: {n_ok}/{len(results)} syslog ports reachable",
+            "results": results,
+        }
+    )
+
+
 # ── Frontend ──────────────────────────────────────────────────────────────────
 
 @app.get("/")
@@ -3481,6 +3890,11 @@ def _register_v1_aliases():
         ("/api/v1/attack/kickstarter",        "api_attack_kickstarter",  ["GET"]),
         ("/api/v1/attack/kickstarter/manifest", "api_attack_kickstarter_manifest", ["GET"]),
         ("/api/v1/attack/register",           "api_attack_register",     ["POST"]),
+        # Settings UI (.env management & broker connectivity probe)
+        ("/api/v1/settings",                  "api_settings_get",        ["GET"]),
+        ("/api/v1/settings",                  "api_settings_post",       ["POST"]),
+        ("/api/v1/settings/generate-key",     "api_settings_generate_key", ["POST"]),
+        ("/api/v1/settings/test-broker",      "api_settings_test_broker", ["POST"]),
     ]
     view_funcs = app.view_functions
     for rule, endpoint_name, methods in aliases:

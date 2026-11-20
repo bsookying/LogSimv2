@@ -11,6 +11,19 @@ generated:
 
 # LogSimv2 Knowledge & Session Log
 
+## 2026-11-20 - Upstream Sync (`v2.8` / `3c27a12`) & Native Settings UI v4 Integration
+
+* **Synced `upstream/main` (`phreezone/LogSimv2` @ `3c27a12`)**:
+  - Clean zero-conflict merge of all 52 upstream commits, bringing in the XDR Attack closed-loop detection scorecard (`rescore`, `coverage`, `ledger`, clickable Cortex console links via `XSIAM_CONSOLE_URL`), syslog Broker port-probe Cribl fallback, expanded 5,000-user estate, Zscaler NSS templates (`v2.8`), `PyYAML>=6.0`, `docs/xsiam-byok-knowledge.md`, and `docs/modules/xdr-two-agent-lateral-design.md`.
+* **Merged Settings UI v4 Natively into `dashboard/`**:
+  - Integrated the 4 Settings routes (`GET/POST /api/settings`, `POST /api/settings/generate-key`, `POST /api/settings/test-broker`) and `/api/v1/settings*` aliases directly into `dashboard/app.py`, and the far-right `⚙ Settings` tab (`#tab-settings`) + Data Source Integrations accordion directly into `dashboard/templates/index.html`.
+  - Applied all 5 polish fixes plus upstream alignment: removed stale auto-restart helper text, made restart banner instructions environment-agnostic (`systemd` + `docker compose`), upgraded card badges to 3 states (`Configured`, `Partial (X/Y)`, `Not configured`), converted `OKTA_AUTH_TYPE` and `PROOFPOINT_AUTH_TYPE` to `choice` dropdowns (`xsiam`, `splunk_hec`, `basic`, `none`), fixed the rapid-save banner `setTimeout` race (`clearTimeout`), and added upstream's `XSIAM_CONSOLE_URL` (41 managed `.env` keys across 10 sources).
+  - Removed the 3 superseded root patch scripts (`patch_settings_final.py`, `patch_settings_v3.py`, `patch_settings_v4.py`).
+* **Verification**:
+  - Passed `py_compile`, AST check, isolated unit tests across all 41 keys / 10 sources / auth gating / validation / atomic `0o600` `.env` write / multi-port broker TCP probe, and macOS JavaScriptCore (`jsc`) full syntax validation of `dashboard/templates/index.html`.
+
+---
+
 ## 2026-11-20 - Initial Clone, Codebase Audit & OKF v0.2 Knowledge Bootstrap
 
 * **Repository Baseline**:

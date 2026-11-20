@@ -47,6 +47,5 @@ knowledge/
 
 This OKF bundle complements (without duplicating) the upstream reference documentation already in the repository:
 * `README.md` — Project overview, feature list, and release history.
-* `MICROSOFT_DETECTION_CATALOG.md` — Microsoft Entra ID & O365 dataset/UUID mappings and detector coverage.
-* `docs/` — 12 topic guides (`getting-started.md`, `transports.md`, `attack-scenarios.md`, `bad-user-playbooks.md`, `training-mode.md`, etc.) + 21 per-module guides in `docs/modules/`.
+* `docs/` — Topic guides (`getting-started.md`, `transports.md`, `attack-scenarios.md`, `bad-user-playbooks.md`, `training-mode.md`, `xsiam-byok-knowledge.md`, etc.) + 22 per-module guides in `docs/modules/`.
 * `integrations/README.md` & `integrations/openapi.yaml` — External REST/MCP automation contract.

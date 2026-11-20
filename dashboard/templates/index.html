@@ -453,13 +453,14 @@
     <span class="sub">Dashboard</span>
   </div>
 
-  <nav class="tab-nav">
+  <nav class="tab-nav" style="flex:1;margin:0 20px">
     <button class="tab-btn xdr-tab" data-tab="xdr" onclick="switchTab('xdr')">⚔ XDR Attack</button>
     <button class="tab-btn active" data-tab="modules" onclick="switchTab('modules')">Modules</button>
     <button class="tab-btn" data-tab="threats" onclick="switchTab('threats')">Threats &amp; Scenarios</button>
     <button class="tab-btn" data-tab="schedule" onclick="switchTab('schedule')">Schedule</button>
     <button class="tab-btn" data-tab="health" onclick="switchTab('health')">Health</button>
     <button class="tab-btn" data-tab="baduser" onclick="switchTab('baduser')">Bad User</button>
+    <button class="tab-btn" data-tab="settings" onclick="switchTab('settings')" style="margin-left:auto">&#9881; Settings</button>
   </nav>
 
   <div class="header-actions">
@@ -976,6 +977,83 @@
   </div>
 
 </div><!-- /tab-baduser -->
+
+<!-- ── Settings tab ──────────────────────────────────────────────────────── -->
+<div id="tab-settings" class="tab-content">
+  <div style="max-width:700px;margin:0 auto;padding:1rem 0">
+
+    <div id="settings-saved-banner" style="display:none;margin-bottom:1rem;padding:.75rem 1rem;
+         background:rgba(35,134,54,.18);border:1px solid rgba(35,134,54,.4);
+         border-radius:6px;font-size:.85rem;color:#3fb950">
+      <span id="settings-saved-msg">Settings saved.</span>
+      <strong id="settings-saved-restart" style="display:block;margin-top:.3rem">
+        Restart LogSim to apply (e.g., <code style="color:var(--text)">sudo systemctl restart logsim</code> or <code style="color:var(--text)">docker compose restart</code>).
+      </strong>
+    </div>
+
+    <!-- LogSim API Key -->
+    <div style="border:1px solid var(--border);border-radius:8px;padding:1.1rem 1.2rem;margin-bottom:1rem">
+      <div style="font-size:.8rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;
+                  letter-spacing:.06em;margin-bottom:.8rem">LogSim API Key</div>
+      <div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;margin-bottom:.5rem">
+        <span id="apikey-label" style="font-family:monospace;font-size:.88rem;color:var(--text);
+              flex:1;min-width:200px">&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;</span>
+        <button onclick="settingsToggleKey()" id="apikey-toggle-btn"
+                style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;
+                       padding:.35rem .7rem;color:var(--text);cursor:pointer;font-size:.8rem">Show</button>
+        <button onclick="settingsGenerateKey()"
+                style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;
+                       padding:.35rem .7rem;color:#f0a5b8;cursor:pointer;font-size:.8rem">Generate New</button>
+        <button onclick="settingsApiKeyDelete()"
+                style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;
+                       padding:.35rem .7rem;color:#f85149;cursor:pointer;font-size:.8rem">Delete</button>
+      </div>
+      <div id="apikey-status" style="font-size:.8rem;min-height:1.2em;color:var(--text-muted)"></div>
+      <div style="font-size:.75rem;color:var(--text-muted);margin-top:.4rem">
+        Sent as <code>X-API-Key</code> header. Changes are saved to <code>.env</code> and take effect after restarting LogSim.
+      </div>
+    </div>
+
+    <!-- Broker VM -->
+    <div style="border:1px solid var(--border);border-radius:8px;padding:1.1rem 1.2rem;margin-bottom:1rem">
+      <div style="font-size:.8rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;
+                  letter-spacing:.06em;margin-bottom:.8rem">Broker VM &mdash; Syslog Host</div>
+      <div id="broker-view" style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap">
+        <span id="broker-ip-label" style="font-family:monospace;font-size:.9rem;color:var(--text);
+              flex:1;min-width:160px"></span>
+        <button onclick="settingsBrokerEdit()"
+                style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;
+                       padding:.35rem .7rem;color:var(--text);cursor:pointer;font-size:.8rem">Edit</button>
+        <button onclick="settingsBrokerDelete()"
+                style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;
+                       padding:.35rem .7rem;color:#f85149;cursor:pointer;font-size:.8rem">Delete</button>
+        <button onclick="settingsBrokerTest()"
+                style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;
+                       padding:.35rem .7rem;color:var(--text);cursor:pointer;font-size:.8rem">Test Connection</button>
+      </div>
+      <div id="broker-edit" style="display:none;align-items:center;gap:.5rem;flex-wrap:wrap">
+        <input id="broker-ip-input" type="text" placeholder="e.g. 10.1.0.158"
+               style="flex:1;min-width:200px;background:var(--surface2);border:1px solid var(--border);
+                      border-radius:4px;padding:.35rem .6rem;color:var(--text);font-size:.85rem">
+        <button onclick="settingsBrokerSave()"
+                style="background:var(--accent);border:none;border-radius:4px;padding:.35rem .9rem;
+                       color:#fff;cursor:pointer;font-size:.8rem;font-weight:600">Save</button>
+        <button onclick="settingsBrokerCancel()"
+                style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;
+                       padding:.35rem .7rem;color:var(--text);cursor:pointer;font-size:.8rem">Cancel</button>
+      </div>
+      <div id="broker-status" style="margin-top:.6rem;font-size:.8rem;min-height:1.2em"></div>
+    </div>
+
+    <!-- Data Source Integrations -->
+    <div style="border:1px solid var(--border);border-radius:8px;padding:1.1rem 1.2rem">
+      <div style="font-size:.8rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;
+                  letter-spacing:.06em;margin-bottom:1rem">Data Source Integrations</div>
+      <div id="ds-container"></div>
+    </div>
+
+  </div>
+</div><!-- /tab-settings -->
 
 </main>
 
@@ -1494,6 +1572,7 @@
     document.querySelectorAll('.tab-content').forEach(el => el.classList.toggle('active', el.id === `tab-${tab}`));
     if (tab === 'health') runHealthCheck();
     if (tab === 'xdr') xdrInit();
+    if (tab === 'settings') loadSettings();
   }
 
   // ── XDR Attack tab ─────────────────────────────────────────────────────────
@@ -2673,6 +2752,379 @@
       }
     } catch (_) { /* silent */ }
   }, 10000);
+
+  // ── Settings tab ──────────────────────────────────────────────────────────
+  let _settingsRawKey = '';
+  let _settingsKeyVisible = false;
+  let _settingsBrokerOriginal = '';
+  let _settingsBannerTimer = null;
+
+  // Data source definitions come from the backend (GET /api/settings -> sources)
+  let DS_VALUES = {};
+  let DS_MASK = '\u2022'.repeat(8);  // backend placeholder for a set secret
+
+  // Unfilled .env.example values like <your-tenant> or /path/to/x count as not set
+  function dsIsPlaceholder(v) {
+    return !v || /^<[^>]*>$/.test(v) || v.indexOf('<your-') !== -1 || v.indexOf('/path/to/') === 0;
+  }
+
+  function dsStatus(ds, values) {
+    const req = ds.fields.filter(f => !f.optional);
+    const targets = req.length ? req : ds.fields;
+    const reqSet = targets.filter(f => !dsIsPlaceholder(values[f.key])).length;
+    const anySet = ds.fields.some(f => !dsIsPlaceholder(values[f.key]));
+    if (reqSet === targets.length) {
+      return { state: 'configured', label: 'Configured' };
+    }
+    if (anySet) {
+      return { state: 'partial', label: `Partial (${reqSet}/${targets.length})` };
+    }
+    return { state: 'unconfigured', label: 'Not configured' };
+  }
+
+  function dsRender(sources, values) {
+    DS_VALUES = values;
+    const container = document.getElementById('ds-container');
+    container.innerHTML = '';
+    sources.forEach(ds => {
+      const st = dsStatus(ds, values);
+      const hasConfig = st.state !== 'unconfigured';
+      const card = document.createElement('div');
+      card.id = 'ds-card-' + ds.id;
+      card.style.cssText = 'border:1px solid var(--border);border-radius:6px;margin-bottom:.6rem;overflow:hidden';
+
+      // Header
+      const header = document.createElement('div');
+      header.style.cssText = 'display:flex;align-items:center;gap:.6rem;padding:.75rem 1rem;cursor:pointer;';
+      header.onclick = () => dsToggle(ds.id);
+
+      const arrow = document.createElement('span');
+      arrow.id = 'ds-arrow-' + ds.id;
+      arrow.textContent = '\u25b6';
+      arrow.style.cssText = 'font-size:.65rem;color:var(--text-muted);transition:transform .2s;';
+
+      const nameEl = document.createElement('span');
+      nameEl.style.cssText = 'flex:1;font-size:.88rem;font-weight:500;color:var(--text)';
+      nameEl.textContent = ds.name;
+
+      const badgeStyles = {
+        configured: 'background:rgba(35,134,54,.2);color:#3fb950;border:1px solid rgba(35,134,54,.4)',
+        partial: 'background:rgba(210,153,34,.18);color:#d29922;border:1px solid rgba(210,153,34,.45)',
+        unconfigured: 'background:var(--surface2);color:var(--text-muted);border:1px solid var(--border)',
+      };
+      const badge = document.createElement('span');
+      badge.id = 'ds-badge-' + ds.id;
+      badge.style.cssText = 'font-size:.75rem;padding:.15rem .5rem;border-radius:10px;' + badgeStyles[st.state];
+      badge.textContent = st.label;
+
+      const editBtn = document.createElement('button');
+      editBtn.style.cssText = 'background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:.28rem .65rem;color:var(--text);cursor:pointer;font-size:.78rem';
+      editBtn.textContent = hasConfig ? 'Edit' : 'Configure';
+      editBtn.onclick = e => { e.stopPropagation(); dsOpen(ds.id); };
+
+      const delBtn = document.createElement('button');
+      delBtn.style.cssText = 'background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:.28rem .65rem;color:#f85149;cursor:pointer;font-size:.78rem' + (hasConfig ? '' : ';display:none');
+      delBtn.id = 'ds-del-' + ds.id;
+      delBtn.textContent = 'Delete';
+      delBtn.onclick = e => { e.stopPropagation(); dsDelete(ds.id, ds); };
+
+      header.append(arrow, nameEl, badge, editBtn, delBtn);
+
+      // Body (collapsed)
+      const body = document.createElement('div');
+      body.id = 'ds-body-' + ds.id;
+      body.style.cssText = 'display:none;padding:.75rem 1rem 1rem;border-top:1px solid var(--border);background:rgba(0,0,0,.12)';
+
+      if (ds.desc) {
+        const d = document.createElement('div');
+        d.style.cssText = 'font-size:.78rem;color:var(--text-muted);margin-bottom:.7rem';
+        d.textContent = ds.desc;
+        body.appendChild(d);
+      }
+
+      const inputStyle = 'flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:.32rem .6rem;color:var(--text);font-size:.82rem';
+      ds.fields.forEach(field => {
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex;align-items:flex-start;gap:.6rem;margin-bottom:.5rem';
+        const lbl = document.createElement('label');
+        lbl.style.cssText = 'width:170px;font-size:.82rem;color:var(--text-muted);padding-top:.35rem';
+        lbl.textContent = field.label + (field.optional ? ' (optional)' : '');
+        lbl.title = field.key;
+        const val = values[field.key] || '';
+        let inp;
+        if (field.type === 'choice') {
+          inp = document.createElement('select');
+          ['', ...field.choices].forEach(c => {
+            const o = document.createElement('option');
+            o.value = c;
+            o.textContent = c || '(default)';
+            inp.appendChild(o);
+          });
+          inp.value = field.choices.includes(val) ? val : '';
+        } else {
+          inp = document.createElement('input');
+          inp.type = field.secret ? 'password' : 'text';
+          inp.autocomplete = 'off';
+          if (field.secret) {
+            inp.placeholder = val === DS_MASK ? 'Set \u2014 leave blank to keep current' : 'Not set';
+          } else {
+            if (!dsIsPlaceholder(val)) inp.value = val;
+            else if (val) inp.placeholder = val;  // show the example as a hint
+          }
+        }
+        inp.id = 'ds-field-' + ds.id + '-' + field.key;
+        inp.style.cssText = inputStyle;
+        const col = document.createElement('div');
+        col.style.cssText = 'flex:1;display:flex;flex-direction:column';
+        col.appendChild(inp);
+        if (field.hint) {
+          const h = document.createElement('div');
+          h.style.cssText = 'font-size:.72rem;color:var(--text-muted);margin-top:.2rem';
+          h.textContent = field.hint;
+          col.appendChild(h);
+        }
+        row.append(lbl, col);
+        body.appendChild(row);
+      });
+
+      const actions = document.createElement('div');
+      actions.style.cssText = 'display:flex;gap:.5rem;margin-top:.75rem';
+
+      const saveBtn = document.createElement('button');
+      saveBtn.style.cssText = 'background:var(--accent);border:none;border-radius:4px;padding:.35rem .9rem;color:#fff;cursor:pointer;font-size:.8rem;font-weight:600';
+      saveBtn.textContent = 'Save';
+      saveBtn.onclick = () => dsSave(ds.id, ds);
+
+      const cancelBtn = document.createElement('button');
+      cancelBtn.style.cssText = 'background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:.35rem .7rem;color:var(--text);cursor:pointer;font-size:.8rem';
+      cancelBtn.textContent = 'Cancel';
+      cancelBtn.onclick = () => dsClose(ds.id);
+
+      actions.append(saveBtn, cancelBtn);
+      body.appendChild(actions);
+
+      card.append(header, body);
+      container.appendChild(card);
+    });
+  }
+
+  function dsToggle(id) {
+    const body = document.getElementById('ds-body-' + id);
+    const arrow = document.getElementById('ds-arrow-' + id);
+    const open = body.style.display === 'none';
+    body.style.display = open ? 'block' : 'none';
+    arrow.style.transform = open ? 'rotate(90deg)' : '';
+  }
+
+  function dsOpen(id) {
+    const body = document.getElementById('ds-body-' + id);
+    const arrow = document.getElementById('ds-arrow-' + id);
+    body.style.display = 'block';
+    arrow.style.transform = 'rotate(90deg)';
+  }
+
+  function dsClose(id) {
+    const body = document.getElementById('ds-body-' + id);
+    const arrow = document.getElementById('ds-arrow-' + id);
+    body.style.display = 'none';
+    arrow.style.transform = '';
+  }
+
+  async function dsSave(id, ds) {
+    // Send only what changed. Secrets: blank = keep. Other fields: blank = clear.
+    const data = {};
+    ds.fields.forEach(f => {
+      const inp = document.getElementById('ds-field-' + id + '-' + f.key);
+      if (!inp) return;
+      const v = inp.value.trim();
+      const cur = DS_VALUES[f.key] || '';
+      if (f.secret) {
+        if (v && v !== DS_MASK) data[f.key] = v;
+      } else if (v !== (dsIsPlaceholder(cur) && f.type !== 'choice' ? '' : cur)) {
+        data[f.key] = v;
+      }
+    });
+    if (!Object.keys(data).length) { dsClose(id); return; }
+    try {
+      await api('/api/settings', 'POST', data);
+      await loadSettings();
+      settingsShowBanner();
+    } catch (e) { alert('Error saving ' + ds.name + ': ' + e.message); }
+  }
+
+  async function dsDelete(id, ds) {
+    const names = ds.fields.map(f => f.label).join(', ');
+    if (!confirm('Remove ' + ds.name + ' configuration? This will clear: ' + names + '.')) return;
+    const data = {};
+    ds.fields.forEach(f => { data[f.key] = ''; });
+    try {
+      await api('/api/settings', 'POST', data);
+      await loadSettings();
+      settingsShowBanner();
+    } catch (e) { alert('Error removing ' + ds.name + ': ' + e.message); }
+  }
+
+  async function loadSettings() {
+    try {
+      const resp = await api('/api/settings');
+      const s = resp.values || {};
+      if (resp.mask) DS_MASK = resp.mask;
+      // API key
+      _settingsRawKey = s['LOGSIM_API_KEY'] || '';
+      _settingsKeyVisible = false;
+      const tkBtn = document.getElementById('apikey-toggle-btn');
+      if (_settingsRawKey) {
+        document.getElementById('apikey-label').textContent = '\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022';
+        if (tkBtn) { tkBtn.style.display = ''; tkBtn.textContent = 'Show'; }
+      } else {
+        document.getElementById('apikey-label').textContent = '(not configured \u2014 click Generate New)';
+        if (tkBtn) tkBtn.style.display = 'none';
+      }
+      // Broker VM
+      const broker = dsIsPlaceholder(s['SYSLOG_HOST']) ? '' : s['SYSLOG_HOST'];
+      _settingsBrokerOriginal = broker;
+      document.getElementById('broker-ip-label').textContent = broker || '(not set)';
+      document.getElementById('broker-ip-input').value = broker;
+      if (!broker) settingsBrokerEdit();
+      // Data sources
+      dsRender(resp.sources || [], s);
+      settingsLoadError('');
+    } catch (e) {
+      console.error('loadSettings failed', e);
+      settingsLoadError('Could not load settings: ' + e.message);
+    }
+  }
+
+  function settingsLoadError(msg) {
+    let el = document.getElementById('settings-load-error');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'settings-load-error';
+      el.style.cssText = 'margin-bottom:1rem;padding:.75rem 1rem;border-radius:6px;font-size:.85rem;' +
+        'background:rgba(248,81,73,.12);border:1px solid rgba(248,81,73,.4);color:#f85149';
+      const banner = document.getElementById('settings-saved-banner');
+      banner.parentNode.insertBefore(el, banner);
+    }
+    el.textContent = msg;
+    el.style.display = msg ? 'block' : 'none';
+  }
+
+  function settingsToggleKey() {
+    _settingsKeyVisible = !_settingsKeyVisible;
+    const tb = document.getElementById('apikey-toggle-btn');
+    if (_settingsKeyVisible) {
+      document.getElementById('apikey-label').textContent = _settingsRawKey || '(not configured)';
+      if (tb) tb.textContent = 'Hide';
+    } else {
+      document.getElementById('apikey-label').textContent = _settingsRawKey
+        ? '\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022' : '(not configured)';
+      if (tb) tb.textContent = 'Show';
+    }
+  }
+
+  async function settingsApiKeyDelete() {
+    if (!confirm('Remove the API key? After restart the dashboard will become unauthenticated.')) return;
+    try {
+      await api('/api/settings', 'POST', { LOGSIM_API_KEY: '' });
+      _settingsRawKey = '';
+      _settingsKeyVisible = false;
+      document.getElementById('apikey-label').textContent = '(not configured \u2014 click Generate New)';
+      const tkBtn = document.getElementById('apikey-toggle-btn');
+      if (tkBtn) tkBtn.style.display = 'none';
+      document.getElementById('apikey-status').textContent = '';
+      settingsShowBanner('API key removed from .env. After restart the dashboard API will be unauthenticated.', true);
+    } catch (e) { alert('Error: ' + e.message); }
+  }
+
+  async function settingsGenerateKey() {
+    if (!confirm('Generate a new API key? It is saved to .env and takes effect after you restart LogSim. ' +
+                 'External API callers will then need the new key.')) return;
+    document.getElementById('apikey-label').textContent = 'Generating...';
+    try {
+      const r = await api('/api/settings/generate-key', 'POST', {});
+      _settingsRawKey = r.key;
+      _settingsKeyVisible = false;
+      document.getElementById('apikey-label').textContent = '\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022';
+      const tkBtn = document.getElementById('apikey-toggle-btn');
+      if (tkBtn) { tkBtn.style.display = ''; tkBtn.textContent = 'Show'; }
+      settingsShowBanner('New key saved to .env. After restarting LogSim, reload this page.', true);
+    } catch (e) {
+      document.getElementById('apikey-label').textContent = _settingsRawKey
+        ? '\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022' : '(not configured \u2014 click Generate New)';
+      alert('Error: ' + e.message);
+    }
+  }
+
+  function settingsBrokerEdit() {
+    document.getElementById('broker-view').style.display = 'none';
+    const ed = document.getElementById('broker-edit');
+    ed.style.display = 'flex';
+    ed.querySelector('input').focus();
+  }
+  function settingsBrokerCancel() {
+    document.getElementById('broker-ip-input').value = _settingsBrokerOriginal;
+    document.getElementById('broker-edit').style.display = 'none';
+    document.getElementById('broker-view').style.display = 'flex';
+  }
+  async function settingsBrokerSave() {
+    const ip = document.getElementById('broker-ip-input').value.trim();
+    if (!ip) { alert('Enter a Broker VM IP address.'); return; }
+    try {
+      await api('/api/settings', 'POST', { SYSLOG_HOST: ip });
+      _settingsBrokerOriginal = ip;
+      document.getElementById('broker-ip-label').textContent = ip;
+      document.getElementById('broker-edit').style.display = 'none';
+      document.getElementById('broker-view').style.display = 'flex';
+      settingsBrokerStatus('', '');
+      settingsShowBanner();
+    } catch (e) { alert('Error saving: ' + e.message); }
+  }
+  async function settingsBrokerDelete() {
+    if (!confirm('Remove the Broker VM IP?')) return;
+    try {
+      await api('/api/settings', 'POST', { SYSLOG_HOST: '' });
+      _settingsBrokerOriginal = '';
+      document.getElementById('broker-ip-label').textContent = '(not set)';
+      settingsBrokerStatus('', '');
+      settingsShowBanner();
+      settingsBrokerEdit();
+    } catch (e) { alert('Error: ' + e.message); }
+  }
+  async function settingsBrokerTest() {
+    const host = document.getElementById('broker-ip-label').textContent.trim();
+    if (!host || host === '(not set)') { settingsBrokerStatus('No Broker VM IP configured.', 'warn'); return; }
+    settingsBrokerStatus('Testing...', '');
+    try {
+      const r = await api('/api/settings/test-broker', 'POST', { host });
+      settingsBrokerStatus(r.message, r.ok ? 'ok' : 'err');
+      const el = document.getElementById('broker-status');
+      (r.results || []).forEach(p => {
+        const row = document.createElement('div');
+        row.style.cssText = 'font-family:monospace;font-size:.78rem;margin-top:.2rem;color:' + (p.ok ? '#3fb950' : '#f85149');
+        row.textContent = (p.ok ? '\u2713 ' : '\u2717 ') + 'TCP ' + p.port + ' \u2014 ' + p.detail + '  (' + p.sources + ')';
+        el.appendChild(row);
+      });
+    } catch (e) { settingsBrokerStatus(e.message, 'err'); }
+  }
+  function settingsBrokerStatus(msg, state) {
+    const el = document.getElementById('broker-status');
+    const colors = { ok: '#3fb950', err: '#f85149', warn: '#d29922', '': 'var(--text-muted)' };
+    el.style.color = colors[state] || colors[''];
+    el.textContent = msg;
+  }
+  function settingsShowBanner(msg, showRestartHint = true) {
+    const el = document.getElementById('settings-saved-banner');
+    const msgEl = document.getElementById('settings-saved-msg');
+    const restartEl = document.getElementById('settings-saved-restart');
+    msgEl.textContent = msg || 'Settings saved.';
+    restartEl.style.display = showRestartHint ? 'block' : 'none';
+    el.style.display = 'block';
+    if (_settingsBannerTimer) clearTimeout(_settingsBannerTimer);
+    _settingsBannerTimer = setTimeout(() => {
+      el.style.display = 'none';
+      _settingsBannerTimer = null;
+    }, 15000);
+  }
 
   init();
 </script>

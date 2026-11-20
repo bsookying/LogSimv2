@@ -27,22 +27,14 @@ The web interface is served by `dashboard/app.py` (`GET /`) as a single-file dar
 
 ---
 
-## 2. The 6 Built-In Tabs (`dashboard/templates/index.html`)
+## 2. The 7 Built-In Tabs (`dashboard/templates/index.html`)
 
 | Tab | Element ID | Primary Controls & Views |
 |---|---|---|
-| **⚔ XDR Attack** | `#tab-xdr` | Purple-team WinRM + network orchestration: `Generate workstation installer` (`logsim-kickstarter.ps1`), `Re-check preflight`, PASS/FAIL preflight & discovered target identity, story selector, `Dry-run`, `Resolve prior open box-cases first`, `Pace` (`Normal`/`Fast`/`Slow`), `Domain override`, `Skip steps`, and 2s polled step results. |
+| **⚔ XDR Attack** | `#tab-xdr` | Purple-team WinRM + network orchestration: `Generate workstation installer` (`logsim-kickstarter.ps1`), `Re-check preflight`, PASS/FAIL preflight & discovered target identity, story selector, vendor checkboxes (PAN NGFW default), `Fresh C2 domain`, `Prevention probe`, `Scorecard` + `↻ Re-score` with clickable Cortex console case/alert links (`XSIAM_CONSOLE_URL`), `Dry-run`, `Pace`, `Skip steps`, and polled step results. |
 | **Modules** *(default)* | `#tab-modules` | Summary KPIs (`Modules Running`, `Total Logs Sent`, `Rate/s`, `Threats`, `Session Time`), per-module control cards (`DASHBOARD_MODULE = True`) with status badge, rate slider, threat-level `<select>`, Start/Stop, collapsible Threat Breakdown chart, 2-minute rolling Event Timeline (`60 × 2s` buckets with red threat markers), and Live Metrics table with Reset actions. |
 | **Threats & Scenarios** | `#tab-threats` | Three sections: (1) **Fire Individual Threat** (`<optgroup>` grouped by target XSIAM analytic), (2) **Run Attack Scenario** (`Random identity campaigns` toggle + 23 scenarios & 21 Identity Threat Campaigns), and (3) **Training Mode** (6 deterministic multi-student packs, `1–50` students, variant seed, 4h Bulk backfill vs 4h Live stream with 409 confirmation gate). |
 | **Schedule** | `#tab-schedule` | Create delayed (`In X minutes`) or `Exact time` jobs (`module_start`, `module_stop`, `global_start`, `global_stop`, `scenario`, `rate_change`), plus live 2s-polled queue with `Cancel` and `Clear Pending`. |
 | **Health** | `#tab-health` | On-demand (`?refresh=1`) diagnostic view across `.env` vars, Threat Intel (Tor, Tranco, DNS), HTTP collectors, Syslog TCP port probes, AWS S3 (`Put`/`Delete`), GCP Pub/Sub, Cribl empty-batch & per-route UUID probes, WEC parallel workers, delivery queue drops, and XSIAM tenant `DOMAIN_HEALTH` alerts. |
 | **Bad User** | `#tab-baduser` | **Config view**: Department & User selector (with OS/AWS warnings), 7 ordered Playbooks showing per-step skip reasons, duration (`1–480` min), threat level, rate slider, and module checkboxes. **Active view**: Target user header, countdown progress bar, live step tracker, per-module counters, and `Stop`. |
-
----
-
-## 3. Fork Settings Tab Design (`patch_settings_v4.py` — Not Yet Applied to `dashboard/`)
-
-The latest fork patch (`patch_settings_v4.py`) adds a far-right **`⚙ Settings`** tab (`#tab-settings`, `data-tab="settings"`) designed to manage `.env` configuration from the browser:
-1. **LogSim API Key Card**: Unmasked `Show`/`Hide`, `Generate New` (bootstraps key even when auth is currently unset), and `Delete`, instructing `sudo systemctl restart logsim` to activate changes.
-2. **Broker VM — Syslog Host Card**: View/edit/clear `SYSLOG_HOST` and `Test Connection` (TCP-probing every syslog port configured across `config.json`).
-3. **Data Source Integrations Accordion (10 Cards, 38 Keys)**: Dynamically rendered from backend `_ST_SOURCES` (`GET /api/settings`): `HTTP Collector`, `Okta SSO`, `Proofpoint Email`, `Cribl Receiver`, `Windows Events — WEC`, `Windows Events — HTTP`, `AWS CloudTrail (S3)`, `GCP Cloud Audit (Pub/Sub)`, `XDR Attack Target (WinRM)`, and `XSIAM Public API`. Treats `.env.example` placeholders (`<your-...>`, `/path/to/...`) as unconfigured and submits diff-only updates.
+| **⚙ Settings** *(far right)* | `#tab-settings` | Native `.env` management UI: **LogSim API Key** (`Show`/`Hide`, `Generate New`, `Delete`), **Broker VM — Syslog Host** (Edit/Delete + multi-port TCP `Test Connection`), and **Data Source Integrations** accordion dynamically rendered from backend `_ST_SOURCES` (**10 cards, 39 keys**, `Configured` / `Partial (X/Y)` / `Not configured` badges, `choice` dropdowns, `.env.example` placeholder detection, diff-only save + reload). |

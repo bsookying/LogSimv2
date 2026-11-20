@@ -59,8 +59,12 @@ At startup, `_register_v1_aliases()` (`dashboard/app.py:3269–3319`) registers 
 | `GET /api/attack/health` | Yes | WinRM & XSIAM preflight readiness check + target workstation identity. |
 | `GET /api/attack/stories` | Yes | Lists the 6 XDR Atomic Red Team stories (`24–29`). |
 | `POST /api/attack/run` | Yes | Async launch (`202` + `run_id`); supports `story_id`, `dry_run`, `cleanup_prior_incidents`, `only_steps`, `skip_steps`, `pace`, `domain_override`, `anchor_dhcp`, `anchor_logon`. |
-| `GET /api/attack/runs/<run_id>` | Yes | Per-step execution status and synthetic event count. |
+| `GET /api/attack/runs/<run_id>` | Yes | Per-step execution status, detection scorecard, and synthetic event count. |
+| `POST /api/attack/runs/<run_id>/rescore` | Yes | Re-pulls XSIAM alerts/incidents for a completed run without re-firing. |
+| `GET /api/attack/coverage` | Yes | Returns XDR technique detection coverage summary. |
+| `GET /api/attack/ledger` | Yes | Returns persisted XDR attack run ledger. |
 | `GET /api/attack/kickstarter` | Yes | Generates downloadable `logsim-kickstarter.ps1` (`?console_ip=&console_url=`). |
+| `GET /api/attack/kickstarter/manifest` | Yes | Returns workstation kickstarter payload manifest. |
 | `POST /api/attack/register` | Yes | Registers a workstation after kickstarter completion. |
 | `GET /api/attack/register` | No | Reads current workstation registration metadata. |
 
@@ -83,11 +87,13 @@ At startup, `_register_v1_aliases()` (`dashboard/app.py:3269–3319`) registers 
 | `POST /api/schedule` | No | Creates scheduled job (`{type, params?, label?, run_at \| delay_seconds}`). |
 | `DELETE /api/schedule/<job_id>` / `DELETE /api/schedule` | No | Cancels one job or clears all pending jobs. |
 
-### Settings API (Defined in `patch_settings_v4.py` — Pending Merge into `dashboard/app.py`)
-* `GET /api/settings` (+ `/api/v1/settings`): Returns `{values, sources, mask}` (secrets masked as `••••••••`; `LOGSIM_API_KEY` unmasked).
-* `POST /api/settings` (+ `/api/v1/settings`): Validates and atomically writes `.env` (`403` if `_API_KEY` is unset).
-* `POST /api/settings/generate-key` (+ `/api/v1/settings/generate-key`): Generates a new `LOGSIM_API_KEY` into `.env` (open even when unconfigured to allow initial bootstrap).
-* `POST /api/settings/test-broker` (+ `/api/v1/settings/test-broker`): TCP-probes all syslog ports configured in `config.json`.
+### Settings API (Native in `dashboard/app.py` — registered on `/api/*` & `/api/v1/*`)
+| Method & Path | v1? | Description / Body |
+|---|---|---|
+| `GET /api/settings` | Yes | Returns `{values, sources, mask}` for all 41 managed `.env` keys (secrets masked as `••••••••`; `LOGSIM_API_KEY` unmasked). |
+| `POST /api/settings` | Yes | Validates (`host`, `url`, `port`, `choice`, 16 KB cap) and atomically writes `.env` (`403` when `_API_KEY` is unset). |
+| `POST /api/settings/generate-key` | Yes | Generates a 64-hex `LOGSIM_API_KEY` into `.env` (`0o600`); open when unconfigured to bootstrap auth. |
+| `POST /api/settings/test-broker` | Yes | Body `{host?}`; TCP-probes every distinct syslog port configured across `config.json`. |
 
 ---
 
