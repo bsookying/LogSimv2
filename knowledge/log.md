@@ -22,11 +22,6 @@ generated:
 * **Verification**:
   - Passed `py_compile`, AST check, isolated unit tests across all 41 keys / 10 sources / auth gating / validation / atomic `0o600` `.env` write / multi-port broker TCP probe, and macOS JavaScriptCore (`jsc`) full syntax validation of `dashboard/templates/index.html`.
 
-* **Local Docker Runtime & Live Verification**:
-  - Installed `colima` (`0.10.3`), `docker` (`29.10.0`), and `docker-compose` (`5.8.0`) via Homebrew on Apple Silicon and wired `/opt/homebrew/lib/docker/cli-plugins` in `~/.docker/config.json`.
-  - Mounted `./.env:/app/.env` in `docker-compose.yml` and added an `EBUSY`/`EXDEV` in-place write fallback to `_st_write_env()` in `dashboard/app.py` so Settings UI edits persist cleanly across `docker compose restart`.
-  - Built and started `logsimv2-logsim-1` on `http://localhost:5000` (`5,000` users, `24` dashboard modules loaded); verified `GET /`, `GET /api/v1/settings` (`10` cards / `41` keys), `GET /api/v1/modules`, and `POST /api/settings` (`403` write gate before key generation).
-
 ---
 
 ## 2026-11-20 - Initial Clone, Codebase Audit & OKF v0.2 Knowledge Bootstrap

@@ -9,8 +9,6 @@ services:
     stdin_open: true
     tty: true
     volumes:
-      # Persist Settings UI edits written to /app/.env back to the host .env file.
-      - ./.env:/app/.env
       # Persistent simulator state (beacon destinations, Windows record numbers) and the
       # domain/resolver cache, so a restart keeps stable entities.
       - logsim-state:/app/state

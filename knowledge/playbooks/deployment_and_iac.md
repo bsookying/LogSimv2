@@ -32,7 +32,6 @@ python -u log_simulator.py
 * **Image**: `python:3.11-slim`, `/app` workdir, installs 19 packages from `requirements.txt`, copies `log_simulator.py`, `config.json`, `modules/`, `integrations/`, `dashboard/`, exposes port `5000`, `CMD ["python", "-u", "log_simulator.py"]`.
 * **Compose Service (`logsim`)**:
   * `ports: ["5000:5000"]`, `env_file: .env`, `restart: unless-stopped`, `stdin_open: true`, `tty: true` (attach to CLI with `docker attach`).
-  * Bind mount `./.env:/app/.env` persists Settings UI changes back to the host `.env` (`_st_write_env()` handles Docker single-file bind-mount `EBUSY`/`EXDEV` cleanly).
   * Named volumes: `logsim-state:/app/state` (beacon targets, Windows event record IDs, `cie_identity_map.json`) and `logsim-cache:/app/domain_cache` (Tranco domain corpus).
   * Optional read-only bind mounts (commented in `docker-compose.yml`): `./config.json:/app/config.json:ro` and `./secrets:/app/secrets:ro` (for `WEC_PFX_PATH` or `GOOGLE_APPLICATION_CREDENTIALS`).
 * **`.dockerignore`**: Excludes `.env`, credentials, `docs/`, `terraform/`, `CloudFormation/`, `XSIAM imports/`, caches, and git metadata from the build context.
