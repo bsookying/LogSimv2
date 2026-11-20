@@ -3428,6 +3428,7 @@ def api_baduser_status():
 # Manage .env keys from the dashboard. Changes apply on restart (env is read at
 # process start). Gated by the normal /api/* API-key check; when NO API key is
 # set, the only write allowed is generate-key (bootstrap).
+import errno as _st_errno
 import re as _st_re
 import socket as _st_socket
 import secrets as _st_secrets
@@ -3688,13 +3689,26 @@ def _st_write_env(updates):
     for k, v in updates.items():
         if k not in written:
             new_lines.append(f"{k}={_st_quote(v)}")
+    content = "\n".join(new_lines) + "\n"
     mode = _ST_ENV_PATH.stat().st_mode & 0o777 if _ST_ENV_PATH.exists() else 0o600
     fd, tmp = _st_tempfile.mkstemp(dir=str(_ST_ENV_PATH.parent), prefix=".env.", suffix=".tmp")
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as fh:
-            fh.write("\n".join(new_lines) + "\n")
+            fh.write(content)
         os.chmod(tmp, mode)
-        os.replace(tmp, _ST_ENV_PATH)
+        try:
+            os.replace(tmp, _ST_ENV_PATH)
+        except OSError as exc:
+            # Single-file Docker bind mounts (./.env:/app/.env) reject rename with EBUSY/EXDEV;
+            # fall back to truncating and writing in-place while cleaning up the temp file.
+            if exc.errno not in (_st_errno.EBUSY, _st_errno.EXDEV):
+                raise
+            with open(_ST_ENV_PATH, "w", encoding="utf-8") as fh:
+                fh.write(content)
+            try:
+                os.unlink(tmp)
+            except OSError:
+                pass
     except Exception:
         try:
             os.unlink(tmp)
